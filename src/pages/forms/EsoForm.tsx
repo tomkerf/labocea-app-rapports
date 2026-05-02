@@ -3,6 +3,7 @@ import { Section, FieldGrid } from '../../components/ui/Section'
 import { Field, TextInput, NumberInput, Select, TextArea } from '../../components/ui/Field'
 import { RadioGroup, CheckboxRow } from '../../components/ui/Radio'
 import MesuresPurgeTable from '../../components/ui/MesuresPurgeTable'
+import EquipementPicker from '../../components/ui/EquipementPicker'
 import type { Intervention } from '../../schemas/intervention'
 import { fillStateOf } from '../../lib/fillState'
 
@@ -112,16 +113,25 @@ export default function EsoForm() {
       <Section title="Métrologie" description="Références des équipements" fillState={fs.metrologie}>
         <FieldGrid cols={2}>
           <Field label="Référence pompe">
-            <TextInput {...register('fiche.data.metrologie.referencePompe')} placeholder="Ex : POM-012" />
+            <Controller control={control} name="fiche.data.metrologie.referencePompe"
+              render={({ field }) => (
+                <EquipementPicker categories={['pompe_pz']} value={field.value} onChange={field.onChange} placeholder="Ex : POM-012" />
+              )} />
           </Field>
           <Field label="Référence tuyau">
             <TextInput {...register('fiche.data.metrologie.referenceTuyau')} placeholder="Ex : TUY-034" />
           </Field>
           <Field label="Référence sonde">
-            <TextInput {...register('fiche.data.metrologie.referenceSonde')} placeholder="Ex : SON-056" />
+            <Controller control={control} name="fiche.data.metrologie.referenceSonde"
+              render={({ field }) => (
+                <EquipementPicker categories={['sonde_niveau', 'multiparametre']} value={field.value} onChange={field.onChange} placeholder="Ex : SON-056" />
+              )} />
           </Field>
           <Field label="Référence chronomètre">
-            <TextInput {...register('fiche.data.metrologie.referenceChronometreSonde')} placeholder="Ex : CHR-078" />
+            <Controller control={control} name="fiche.data.metrologie.referenceChronometreSonde"
+              render={({ field }) => (
+                <EquipementPicker categories={['chronometre']} value={field.value} onChange={field.onChange} placeholder="Ex : CHR-078" />
+              )} />
           </Field>
         </FieldGrid>
       </Section>
