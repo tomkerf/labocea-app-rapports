@@ -8,7 +8,7 @@ export function Section({
   title,
   description,
   children,
-  defaultOpen = true,
+  defaultOpen = false,
   badge,
   fillState,
 }: {

@@ -92,7 +92,7 @@ export default function EsuForm() {
         title="Localisation et milieu"
         description="Type de milieu aquatique, conditions hydrologiques"
         fillState={fs.localisation}
-        defaultOpen={false}
+       
       >
         <FieldGrid cols={2}>
           <Field label="Identification exacte du point" className="md:col-span-2">
@@ -204,7 +204,7 @@ export default function EsuForm() {
         title="Matériel de prélèvement"
         description="Type et matériau de l'équipement utilisé"
         fillState={fs.materiel}
-        defaultOpen={false}
+       
       >
         <FieldGrid cols={2}>
           <Field label="Type de matériel" className="md:col-span-2">
@@ -288,7 +288,7 @@ export default function EsuForm() {
         title="Mode de prélèvement"
         description="Ponctuel, composite manuel ou asservi"
         fillState={fs.modePrelevement}
-        defaultOpen={false}
+       
       >
         <FieldGrid cols={2}>
           <Field label="Mode" className="md:col-span-2">
@@ -435,7 +435,7 @@ export default function EsuForm() {
         title="Mesures in situ"
         description="Paramètres physico-chimiques mesurés sur le terrain"
         fillState={fs.mesuresInSitu}
-        defaultOpen={false}
+       
       >
         <FieldGrid cols={2}>
           <Field label="Code appareil / sondes">
@@ -526,7 +526,7 @@ export default function EsuForm() {
         title="Métrologie"
         description="Codes des équipements utilisés"
         fillState={fs.metrologie}
-        defaultOpen={false}
+       
       >
         <FieldGrid cols={2}>
           <Field label="Code sonde multiparamètre">
@@ -549,7 +549,7 @@ export default function EsuForm() {
         title="Observations"
         description="Météo, remarques terrain"
         fillState={fs.observations}
-        defaultOpen={false}
+       
       >
         <FieldGrid cols={2}>
           <Field label="Conditions météo">
@@ -595,7 +595,7 @@ export default function EsuForm() {
         title="Réception laboratoire"
         description="À remplir à la réception des échantillons"
         fillState={fs.receptionLabo}
-        defaultOpen={false}
+       
       >
         <FieldGrid cols={2}>
           <Field label="Date de réception">

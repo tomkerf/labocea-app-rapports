@@ -90,7 +90,7 @@ export default function EsoSspForm() {
       </Section>
 
       {/* ─────── 2. Métrologie ─────── */}
-      <Section title="Métrologie" description="Références des équipements" fillState={fs.metrologie} defaultOpen={false}>
+      <Section title="Métrologie" description="Références des équipements" fillState={fs.metrologie}>
         <FieldGrid cols={2}>
           <Field label="Référence pompe">
             <TextInput {...register('fiche.data.metrologie.referencePompe')} placeholder="Ex : POM-012" />
@@ -108,7 +108,7 @@ export default function EsoSspForm() {
       </Section>
 
       {/* ─────── 3. Description de l'ouvrage ─────── */}
-      <Section title="Description de l'ouvrage" fillState={fs.ouvrage} defaultOpen={false}>
+      <Section title="Description de l'ouvrage" fillState={fs.ouvrage}>
         <FieldGrid cols={2}>
           <Field label="État margelle / capot / tête">
             <Controller
@@ -247,7 +247,7 @@ export default function EsoSspForm() {
       </Section>
 
       {/* ─────── 4. Purge ─────── */}
-      <Section title="Purge" fillState={fs.purge} defaultOpen={false}>
+      <Section title="Purge" fillState={fs.purge}>
         <FieldGrid cols={2}>
           <Field label="Matériel utilisé" className="md:col-span-2">
             <Controller
@@ -323,7 +323,7 @@ export default function EsoSspForm() {
       </Section>
 
       {/* ─────── 5. Prélèvement ─────── */}
-      <Section title="Prélèvement et conditionnement" fillState={fs.prelevement} defaultOpen={false}>
+      <Section title="Prélèvement et conditionnement" fillState={fs.prelevement}>
         <FieldGrid cols={2}>
           <Field label="Matériel utilisé" className="md:col-span-2">
             <Controller
@@ -368,7 +368,7 @@ export default function EsoSspForm() {
         title="Suivi physico-chimique"
         description="Mesures pendant la purge · stabilité : T ±0,2°C · pH ±0,1 upH · cond. 5 %/<500 ou 2 %/≥500 µS/cm sur 10 min"
         fillState={fs.suivi}
-        defaultOpen={false}
+       
       >
         <MesuresPurgeTable
           mesures={mesures}
@@ -379,7 +379,7 @@ export default function EsoSspForm() {
       </Section>
 
       {/* ─────── 7. Paramètres fin de pompage ─────── */}
-      <Section title="Paramètres physico-chimiques fin de pompage" fillState={fs.params} defaultOpen={false}>
+      <Section title="Paramètres physico-chimiques fin de pompage" fillState={fs.params}>
         <FieldGrid cols={2}>
           <Field label="T (°C)">
             <NumberInput {...register('fiche.data.paramsFinPompage.tempC', { valueAsNumber: true })} step="0.1" />
@@ -400,7 +400,7 @@ export default function EsoSspForm() {
       </Section>
 
       {/* ─────── 8. Observations ─────── */}
-      <Section title="Observations" fillState={fs.observations} defaultOpen={false}>
+      <Section title="Observations" fillState={fs.observations}>
         <FieldGrid cols={2}>
           <Field label="Réalimentation de l'ouvrage" className="md:col-span-2">
             <Controller
@@ -454,7 +454,7 @@ export default function EsoSspForm() {
       </Section>
 
       {/* ─────── 9. Réception labo ─────── */}
-      <Section title="Réception laboratoire" fillState={fs.receptionLabo} defaultOpen={false}>
+      <Section title="Réception laboratoire" fillState={fs.receptionLabo}>
         <FieldGrid cols={2}>
           <Field label="Date de réception">
             <TextInput type="date" {...register('receptionLabo.dateReception')} />

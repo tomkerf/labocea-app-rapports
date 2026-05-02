@@ -140,7 +140,7 @@ export default function PautoForm() {
       </Section>
 
       {/* ─────── 2. Localisation ─────── */}
-      <Section title="Localisation du point d'échantillonnage" defaultOpen={false} fillState={fs.localisation}>
+      <Section title="Localisation du point d'échantillonnage" fillState={fs.localisation}>
         <Field label="Identification exacte">
           <TextArea {...register('fiche.data.localisation.identificationExacte')} placeholder="Description précise du point (regard, point de rejet, n° ouvrage…)" />
         </Field>
@@ -248,7 +248,7 @@ export default function PautoForm() {
       </Section>
 
       {/* ─────── 4. Débitmètre ─────── */}
-      <Section title="Débitmètre" defaultOpen={false} fillState={fs.debitmetre}>
+      <Section title="Débitmètre" fillState={fs.debitmetre}>
         <FieldGrid cols={2}>
           <Field label="Type de débitmètre">
             <Controller
@@ -523,7 +523,7 @@ export default function PautoForm() {
       </Section>
 
       {/* ─────── 5. Métrologie ─────── */}
-      <Section title="Métrologie — codes équipements" defaultOpen={false} description="Identification des appareils utilisés sur le terrain" fillState={fs.metrologie}>
+      <Section title="Métrologie — codes équipements" description="Identification des appareils utilisés sur le terrain" fillState={fs.metrologie}>
         <FieldGrid cols={3}>
           <Field label="Débitmètre"><TextInput {...register('fiche.data.metrologie.codeDebitmetre')} /></Field>
           <Field label="Préleveur"><TextInput {...register('fiche.data.metrologie.codePreleveur')} /></Field>
@@ -727,7 +727,7 @@ export default function PautoForm() {
       </Section>
 
       {/* ─────── 7. Vérifications ─────── */}
-      <Section title="Vérifications de l'échantillonneur" defaultOpen={false} fillState={fs.verifications}>
+      <Section title="Vérifications de l'échantillonneur" fillState={fs.verifications}>
         <h3 className="text-sm font-semibold text-slate-700 mb-3">Vitesse d'aspiration (≥ 0,5 m/s)</h3>
         <div className="grid md:grid-cols-2 gap-4">
           {(['debut', 'fin'] as const).map((phase) => (
@@ -883,7 +883,7 @@ export default function PautoForm() {
       </Section>
 
       {/* ─────── 9. Constitution ─────── */}
-      <Section title="Constitution et transport de l'échantillon" defaultOpen={false} fillState={fs.constitution}>
+      <Section title="Constitution et transport de l'échantillon" fillState={fs.constitution}>
         <Field label="Homogénéisation">
           <Controller
             control={control}
@@ -904,7 +904,7 @@ export default function PautoForm() {
       </Section>
 
       {/* ─────── 10. Réception laboratoire ─────── */}
-      <Section title="Réception au laboratoire" defaultOpen={false} fillState={fs.receptionLabo}>
+      <Section title="Réception au laboratoire" fillState={fs.receptionLabo}>
         <FieldGrid cols={2}>
           <Field label="Date de réception">
             <TextInput type="date" {...register('receptionLabo.dateReception')} />
