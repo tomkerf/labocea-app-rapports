@@ -1,8 +1,14 @@
+import { useEffect, useMemo } from 'react'
 import { useFormContext, Controller, useWatch } from 'react-hook-form'
 import { Section, FieldGrid } from '../../components/ui/Section'
 import { Field, TextInput, NumberInput, Select, TextArea } from '../../components/ui/Field'
 import { RadioGroup, CheckboxRow } from '../../components/ui/Radio'
 import { ConformityBadge } from '../../components/ui/ConformityBadge'
+import EquipementPicker from '../../components/ui/EquipementPicker'
+import TuyauPicker from '../../components/ui/TuyauPicker'
+import { useEquipementByNom, parsePoids } from '../../db/equipements'
+import { useClientNoms } from '../../db/clients'
+import { useTechnicienInitiales } from '../../db/techniciens'
 import type { Intervention } from '../../schemas/intervention'
 import { fillStateOf } from '../../lib/fillState'
 import {
@@ -22,7 +28,7 @@ import {
  * Le composant suppose un FormProvider parent fournissant `Intervention` typé.
  */
 export default function PautoForm() {
-  const { register, control } = useFormContext<Intervention>()
+  const { register, control, setValue } = useFormContext<Intervention>()
 
   // Observation globale pour calculer les indicateurs de remplissage par section.
   // Un seul useWatch racine évite N abonnements et garde tout en sync.
@@ -30,6 +36,63 @@ export default function PautoForm() {
 
   // Narrowing vers FichePauto — le composant n'est monté que si typeFiche === 'PAUTO'
   const fiche = all?.fiche?.typeFiche === 'PAUTO' ? all.fiche.data : undefined
+
+  const clientNoms = useClientNoms()
+  const techInitiales = useTechnicienInitiales()
+
+  /** Moyenne des 6 essais de volume unitaire — calculée réactivement depuis fiche (useWatch). */
+  const moyenneGlobaleVolumeUnitaire = useMemo(() => {
+    const vvu = fiche?.verifVolumeUnitaire
+    const vals = (['debut', 'fin'] as const)
+      .flatMap((ph) => (['essai1Ml', 'essai2Ml', 'essai3Ml'] as const).map((k) => vvu?.[ph]?.[k]))
+      .filter((v): v is number => typeof v === 'number' && !isNaN(v) && v > 0)
+    if (!vals.length) return null
+    return Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10
+  }, [fiche?.verifVolumeUnitaire])
+
+  // Persiste la moyenne dans le store RHF pour qu'elle soit sauvegardée avec l'intervention
+  useEffect(() => {
+    if (moyenneGlobaleVolumeUnitaire !== null) {
+      setValue('fiche.data.volumeGlobal.volumeUnitaireMoyenMl' as never, moyenneGlobaleVolumeUnitaire as never)
+    }
+  }, [moyenneGlobaleVolumeUnitaire, setValue])
+
+  /** Volume global théorique (L) = moyenne (mL) × nombre prélèvements / 1000 */
+  const volumeGlobalTheorique = useMemo(() => {
+    const n = fiche?.volumeGlobal?.nombrePrelevementsRealises
+    if (!moyenneGlobaleVolumeUnitaire || !n || n <= 0) return null
+    return Math.round((moyenneGlobaleVolumeUnitaire / 1000) * n * 100) / 100
+  }, [moyenneGlobaleVolumeUnitaire, fiche?.volumeGlobal?.nombrePrelevementsRealises])
+
+  useEffect(() => {
+    if (volumeGlobalTheorique !== null) {
+      setValue('fiche.data.volumeGlobal.volumeGlobalTheoriqueL' as never, volumeGlobalTheorique as never)
+    }
+  }, [volumeGlobalTheorique, setValue])
+
+  /** Nombre de prélèvements attendus = (volume rejeté m³ × 1000) ÷ asservissement L */
+  const nombrePrelevementsAttendus = useMemo(() => {
+    const vol = fiche?.volumeGlobal?.volumeRejeteM3
+    const asserv = fiche?.echantillonneur?.asservissementParLitres
+    if (!vol || !asserv || asserv <= 0) return null
+    return Math.round((vol * 1000) / asserv)
+  }, [fiche?.volumeGlobal?.volumeRejeteM3, fiche?.echantillonneur?.asservissementParLitres])
+
+  useEffect(() => {
+    if (nombrePrelevementsAttendus !== null) {
+      setValue('fiche.data.volumeGlobal.nombrePrelevementsAttendus' as never, nombrePrelevementsAttendus as never)
+    }
+  }, [nombrePrelevementsAttendus, setValue])
+
+  // Auto-fill poids flacon début depuis la fiche équipement PMC v2
+  const codeFlacon = fiche?.metrologie?.codeFlacon
+  const flaconEquipement = useEquipementByNom(codeFlacon)
+  useEffect(() => {
+    const poids = parsePoids(flaconEquipement?.poids)
+    if (poids !== null) {
+      setValue('fiche.data.volumeGlobal.poidsFlaconDebutKg' as never, poids as never)
+    }
+  }, [flaconEquipement, setValue])
 
   const dispositifType = fiche?.dispositifJaugeur?.type
   const debitmetreType = fiche?.debitmetre?.type
@@ -74,7 +137,12 @@ export default function PautoForm() {
 
   const fs = {
     identification: fillStateOf({
-      ...all?.identification,
+      client: all?.identification?.client,
+      numConventionDevis: all?.identification?.numConventionDevis,
+      site: all?.identification?.site,
+      operateur: all?.identification?.operateur,
+      dateDebut: all?.identification?.dateDebut,
+      dateFin: all?.identification?.dateFin,
       natureEffluent: fiche?.localisation?.natureEffluent,
     }),
     localisation: fillStateOf(fiche?.localisation),
@@ -100,7 +168,14 @@ export default function PautoForm() {
       <Section title="Identification" description="Client, site, opérateur, dates de bilan" fillState={fs.identification}>
         <FieldGrid cols={2}>
           <Field label="Client" required>
-            <TextInput {...register('identification.client')} placeholder="Nom du client" />
+            <TextInput
+              {...register('identification.client')}
+              placeholder="Nom du client"
+              list="pauto-clients-list"
+            />
+            <datalist id="pauto-clients-list">
+              {clientNoms.map((n) => <option key={n} value={n} />)}
+            </datalist>
           </Field>
           <Field label="N° convention / devis">
             <TextInput {...register('identification.numConventionDevis')} />
@@ -109,7 +184,14 @@ export default function PautoForm() {
             <TextInput {...register('identification.site')} placeholder="Lieu de l'intervention" />
           </Field>
           <Field label="Opérateur LABOCEA" required>
-            <TextInput {...register('identification.operateur')} />
+            <TextInput
+              {...register('identification.operateur')}
+              placeholder="Initiales (ex : THK)"
+              list="pauto-tech-list"
+            />
+            <datalist id="pauto-tech-list">
+              {techInitiales.map((i) => <option key={i} value={i} />)}
+            </datalist>
           </Field>
           <Field label="Date / heure début de bilan" required>
             <TextInput type="datetime-local" {...register('identification.dateDebut')} />
@@ -525,16 +607,43 @@ export default function PautoForm() {
       {/* ─────── 5. Métrologie ─────── */}
       <Section title="Métrologie — codes équipements" description="Identification des appareils utilisés sur le terrain" fillState={fs.metrologie}>
         <FieldGrid cols={3}>
-          <Field label="Débitmètre"><TextInput {...register('fiche.data.metrologie.codeDebitmetre')} /></Field>
-          <Field label="Préleveur"><TextInput {...register('fiche.data.metrologie.codePreleveur')} /></Field>
-          <Field label="Éprouvette"><TextInput {...register('fiche.data.metrologie.codeEprouvette')} /></Field>
-          <Field label="Réglet"><TextInput {...register('fiche.data.metrologie.codeReglet')} /></Field>
-          <Field label="Réglet éprouvette"><TextInput {...register('fiche.data.metrologie.codeRegletEprouvette')} /></Field>
-          <Field label="Tuyau pompe"><TextInput {...register('fiche.data.metrologie.codeTuyauPompe')} /></Field>
-          <Field label="Tuyau prélèvement"><TextInput {...register('fiche.data.metrologie.codeTuyauPrelevement')} /></Field>
-          <Field label="Chronomètre"><TextInput {...register('fiche.data.metrologie.codeChronometre')} /></Field>
-          <Field label="Balance"><TextInput {...register('fiche.data.metrologie.codeBalance')} /></Field>
-          <Field label="Flacon"><TextInput {...register('fiche.data.metrologie.codeFlacon')} /></Field>
+          <Field label="Débitmètre">
+            <Controller name={'fiche.data.metrologie.codeDebitmetre' as never} control={control}
+              render={({ field }) => <EquipementPicker categories={['debitmetre']} value={field.value} onChange={field.onChange} placeholder="Ex : DEB-012" />} />
+          </Field>
+          <Field label="Préleveur">
+            <Controller name={'fiche.data.metrologie.codePreleveur' as never} control={control}
+              render={({ field }) => <EquipementPicker categories={['preleveur']} value={field.value} onChange={field.onChange} placeholder="Ex : PRL-004" />} />
+          </Field>
+          <Field label="Éprouvette">
+            <Controller name={'fiche.data.metrologie.codeEprouvette' as never} control={control}
+              render={({ field }) => <EquipementPicker categories={['eprouvette']} value={field.value} onChange={field.onChange} placeholder="Ex : EPR-001" />} />
+          </Field>
+          <Field label="Réglet">
+            <Controller name={'fiche.data.metrologie.codeReglet' as never} control={control}
+              render={({ field }) => <EquipementPicker categories={['reglet']} value={field.value} onChange={field.onChange} placeholder="Ex : REG-001" />} />
+          </Field>
+          <Field label="Réglet éprouvette">
+            <Controller name={'fiche.data.metrologie.codeRegletEprouvette' as never} control={control}
+              render={({ field }) => <EquipementPicker categories={['reglet', 'eprouvette']} value={field.value} onChange={field.onChange} placeholder="Ex : REG-002" />} />
+          </Field>
+          <Field label="Tuyau pompe">
+            <Controller name={'fiche.data.metrologie.codeTuyauPompe' as never} control={control}
+              render={({ field }) => <TuyauPicker value={field.value} onChange={field.onChange} placeholder="Ex : Q25S1 SILICONE" />} />
+          </Field>
+          <Field label="Tuyau prélèvement">
+            <Controller name={'fiche.data.metrologie.codeTuyauPrelevement' as never} control={control}
+              render={({ field }) => <TuyauPicker value={field.value} onChange={field.onChange} placeholder="Ex : Q25TFE1 TEFLON" />} />
+          </Field>
+          <Field label="Chronomètre">
+            <Controller name={'fiche.data.metrologie.codeChronometre' as never} control={control}
+              render={({ field }) => <EquipementPicker categories={['chronometre']} value={field.value} onChange={field.onChange} placeholder="Ex : CHR-001" />} />
+          </Field>
+          <Field label="Balance"><TextInput {...register('fiche.data.metrologie.codeBalance')} placeholder="Ex : BAL-001" /></Field>
+          <Field label="Flacon">
+            <Controller name={'fiche.data.metrologie.codeFlacon' as never} control={control}
+              render={({ field }) => <EquipementPicker categories={['flacon']} value={field.value} onChange={field.onChange} placeholder="Ex : FLA-001" />} />
+          </Field>
           <Field label="Tomkey"><TextInput {...register('fiche.data.metrologie.codeTomkey')} /></Field>
         </FieldGrid>
       </Section>
@@ -715,15 +824,6 @@ export default function PautoForm() {
           </Field>
         </FieldGrid>
 
-        <h3 className="text-sm font-semibold text-slate-700 mt-5 mb-2">Asservissement</h3>
-        <FieldGrid cols={2}>
-          <Field label="Volume unitaire (mL)">
-            <NumberInput {...register('fiche.data.echantillonneur.asservissementVolumeMl', { valueAsNumber: true })} />
-          </Field>
-          <Field label="Tous les … (litres)">
-            <NumberInput {...register('fiche.data.echantillonneur.asservissementParLitres', { valueAsNumber: true })} />
-          </Field>
-        </FieldGrid>
       </Section>
 
       {/* ─────── 7. Vérifications ─────── */}
@@ -736,21 +836,44 @@ export default function PautoForm() {
                 {phase === 'debut' ? 'Début bilan' : 'Fin bilan'}
               </div>
               <div className="space-y-3">
-                {[0, 1, 2].map((i) => (
-                  <div key={i} className="grid grid-cols-[auto_1fr_1fr] gap-2 items-end">
-                    <div className="text-xs text-slate-500 pb-3">Essai {i + 1}</div>
-                    <Field label={i === 0 ? 'Temps (s)' : ''}>
-                      <NumberInput
-                        {...register(`fiche.data.verifVitesseAspiration.${phase}.${i}.tempsS` as const, { valueAsNumber: true })}
-                      />
-                    </Field>
-                    <Field label={i === 0 ? 'Vitesse (m/s)' : ''}>
-                      <NumberInput
-                        {...register(`fiche.data.verifVitesseAspiration.${phase}.${i}.vitesseMs` as const, { valueAsNumber: true })}
-                      />
-                    </Field>
-                  </div>
-                ))}
+                {[0, 1, 2].map((i) => {
+                  const tempsField = register(
+                    `fiche.data.verifVitesseAspiration.${phase}.${i}.tempsS` as const,
+                    { valueAsNumber: true },
+                  )
+                  return (
+                    <div key={i} className="grid grid-cols-[auto_1fr_1fr] gap-2 items-end">
+                      <div className="text-xs text-slate-500 pb-3">Essai {i + 1}</div>
+                      <Field label={i === 0 ? 'Temps (s)' : ''}>
+                        <NumberInput
+                          {...tempsField}
+                          onChange={(e) => {
+                            tempsField.onChange(e)
+                            const temps = parseFloat(e.target.value)
+                            const longueur = fiche?.echantillonneur?.tuyauLongueurM
+                            if (temps > 0 && longueur) {
+                              const v = Math.round((longueur / temps) * 1000) / 1000
+                              setValue(
+                                `fiche.data.verifVitesseAspiration.${phase}.${i}.vitesseMs` as never,
+                                v as never,
+                              )
+                            }
+                          }}
+                        />
+                      </Field>
+                      <Field label={i === 0 ? 'Vitesse (m/s)' : ''}>
+                        <input
+                          type="number"
+                          readOnly
+                          value={fiche?.verifVitesseAspiration?.[phase]?.[i]?.vitesseMs ?? ''}
+                          onChange={() => {/* contrôlé en lecture seule */}}
+                          className="w-full min-h-[44px] px-3 py-3 md:py-2 border border-slate-200 rounded-md bg-slate-50 text-slate-700 text-base md:text-sm cursor-default focus:outline-none"
+                        />
+                        <input type="hidden" {...register(`fiche.data.verifVitesseAspiration.${phase}.${i}.vitesseMs` as const, { valueAsNumber: true })} />
+                      </Field>
+                    </div>
+                  )
+                })}
               </div>
               <div className="mt-3">
                 <ConformityBadge result={phase === 'debut' ? vitesseDebut : vitesseFin} size="sm" />
@@ -772,9 +895,11 @@ export default function PautoForm() {
               <div key={phase} className="border border-slate-200 rounded-lg p-3">
                 <div className="text-xs font-semibold text-slate-700 mb-2">{phase === 'debut' ? 'Début bilan' : 'Fin bilan'}</div>
                 <FieldGrid cols={1}>
-                  <Field label="Essai 1 (mL)"><NumberInput {...register(`fiche.data.verifVolumeUnitaire.${phase}.essai1Ml` as const, { valueAsNumber: true })} /></Field>
-                  <Field label="Essai 2 (mL)"><NumberInput {...register(`fiche.data.verifVolumeUnitaire.${phase}.essai2Ml` as const, { valueAsNumber: true })} /></Field>
-                  <Field label="Essai 3 (mL)"><NumberInput {...register(`fiche.data.verifVolumeUnitaire.${phase}.essai3Ml` as const, { valueAsNumber: true })} /></Field>
+                  {(['essai1Ml', 'essai2Ml', 'essai3Ml'] as const).map((key, idx) => (
+                    <Field key={key} label={`Essai ${idx + 1} (mL)`}>
+                      <NumberInput {...register(`fiche.data.verifVolumeUnitaire.${phase}.${key}` as const, { valueAsNumber: true })} />
+                    </Field>
+                  ))}
                 </FieldGrid>
                 {/* Stats calculées */}
                 <div className="mt-3 space-y-2 text-xs text-slate-600 border-t border-slate-100 pt-3">
@@ -793,32 +918,48 @@ export default function PautoForm() {
 
         <h3 className="text-sm font-semibold text-slate-700 mt-5 mb-2">Volume global collecté</h3>
         <FieldGrid cols={2}>
-          <Field label="Volume unitaire moyen début/fin (mL)">
-            <NumberInput {...register('fiche.data.volumeGlobal.volumeUnitaireMoyenMl', { valueAsNumber: true })} />
+          <Field label="Volume unitaire moyen début/fin (mL)" hint="Calculé automatiquement">
+            <div className="w-full min-h-[44px] px-3 py-3 md:py-2 border border-slate-200 rounded-md bg-slate-50 text-slate-700 text-base md:text-sm flex items-center">
+              {moyenneGlobaleVolumeUnitaire !== null ? `${moyenneGlobaleVolumeUnitaire} mL` : <span className="text-slate-400">—</span>}
+            </div>
           </Field>
           <Field label="Nombre de prélèvements réalisés">
             <NumberInput {...register('fiche.data.volumeGlobal.nombrePrelevementsRealises', { valueAsNumber: true })} />
           </Field>
-          <Field label="Volume global théorique (L)">
-            <NumberInput {...register('fiche.data.volumeGlobal.volumeGlobalTheoriqueL', { valueAsNumber: true })} />
+          <Field label="Volume global théorique (L)" hint="Calculé automatiquement">
+            <div className="w-full min-h-[44px] px-3 py-3 md:py-2 border border-slate-200 rounded-md bg-slate-50 text-slate-700 text-base md:text-sm flex items-center">
+              {volumeGlobalTheorique !== null ? `${volumeGlobalTheorique} L` : <span className="text-slate-400">—</span>}
+            </div>
           </Field>
-          <Field label="Poids flacon début (kg)">
-            <NumberInput {...register('fiche.data.volumeGlobal.poidsFlaconDebutKg', { valueAsNumber: true })} />
+          <Field label="Poids flacon début (kg)" hint={flaconEquipement?.poids ? `Flacon : ${flaconEquipement.poids}` : undefined}>
+            <Controller
+              name={'fiche.data.volumeGlobal.poidsFlaconDebutKg' as never}
+              control={control}
+              render={({ field }) => (
+                <NumberInput
+                  value={field.value ?? ''}
+                  onChange={(e) => field.onChange(e.target.value === '' ? null : parseFloat(e.target.value))}
+                  onBlur={field.onBlur}
+                />
+              )}
+            />
           </Field>
           <Field label="Poids flacon fin (kg)">
             <NumberInput {...register('fiche.data.volumeGlobal.poidsFlaconFinKg', { valueAsNumber: true })} />
           </Field>
-          <Field label="Poids échantillon fin (kg)">
-            <NumberInput {...register('fiche.data.volumeGlobal.poidsEchantillonFinKg', { valueAsNumber: true })} />
-          </Field>
           <div className="md:col-span-2">
             <ConformityBadge label="Conformité volume global (calculée)" result={volumeGlobal} />
           </div>
-          <Field label="Volume rejeté (m³)">
+          <Field label="Volume rejeté (L)">
             <NumberInput {...register('fiche.data.volumeGlobal.volumeRejeteM3', { valueAsNumber: true })} />
           </Field>
-          <Field label="Nombre prélèvements attendus" hint="volume rejeté / asservissement">
-            <NumberInput {...register('fiche.data.volumeGlobal.nombrePrelevementsAttendus', { valueAsNumber: true })} />
+          <Field label="Asservissement tous les … (L)">
+            <NumberInput {...register('fiche.data.echantillonneur.asservissementParLitres', { valueAsNumber: true })} />
+          </Field>
+          <Field label="Nombre prélèvements attendus" hint="Calculé automatiquement">
+            <div className="w-full min-h-[44px] px-3 py-3 md:py-2 border border-slate-200 rounded-md bg-slate-50 text-slate-700 text-base md:text-sm flex items-center">
+              {nombrePrelevementsAttendus !== null ? nombrePrelevementsAttendus : <span className="text-slate-400">—</span>}
+            </div>
           </Field>
           <div className="md:col-span-2">
             <ConformityBadge label="Ratio prélèvements (calculé, seuil ≥ 95 %)" result={ratioPrelevements} />

@@ -6,6 +6,8 @@ import MesuresPurgeTable from '../../components/ui/MesuresPurgeTable'
 import EquipementPicker from '../../components/ui/EquipementPicker'
 import type { Intervention } from '../../schemas/intervention'
 import { fillStateOf } from '../../lib/fillState'
+import { useClientNoms } from '../../db/clients'
+import { useTechnicienInitiales } from '../../db/techniciens'
 
 /**
  * Formulaire PENV-SU-0114 — Suivi environnemental (FD T 90-523-3).
@@ -14,6 +16,9 @@ export default function EsoForm() {
   const { register, control } = useFormContext<Intervention>()
   const all = useWatch<Intervention>({ control })
   const fiche = all?.fiche?.typeFiche === 'ESO' ? all.fiche.data : undefined
+
+  const clientNoms = useClientNoms()
+  const techInitiales = useTechnicienInitiales()
 
   const typeStation = fiche?.typeStation
   const lieuPrel = fiche?.prelevement?.lieuPrelevement
@@ -41,7 +46,15 @@ export default function EsoForm() {
       <Section title="Identification" fillState={fs.identification}>
         <FieldGrid cols={2}>
           <Field label="Client" required>
-            <TextInput {...register('identification.client')} placeholder="Nom du client" autoCapitalize="words" />
+            <TextInput
+              {...register('identification.client')}
+              placeholder="Nom du client"
+              autoCapitalize="words"
+              list="eso-clients-list"
+            />
+            <datalist id="eso-clients-list">
+              {clientNoms.map((n) => <option key={n} value={n} />)}
+            </datalist>
           </Field>
           <Field label="N° convention / devis">
             <TextInput {...register('identification.numConventionDevis')} placeholder="Ex : DEV-2025-042" />
@@ -53,7 +66,14 @@ export default function EsoForm() {
             <TextInput {...register('identification.site')} placeholder="Nom ou code du site" autoCapitalize="words" />
           </Field>
           <Field label="Identité préleveur" required>
-            <TextInput {...register('identification.operateur')} placeholder="Prénom NOM" autoCapitalize="words" />
+            <TextInput
+              {...register('identification.operateur')}
+              placeholder="Initiales (ex : THK)"
+              list="eso-tech-list"
+            />
+            <datalist id="eso-tech-list">
+              {techInitiales.map((i) => <option key={i} value={i} />)}
+            </datalist>
           </Field>
           <Field label="Date de prélèvement" required>
             <TextInput type="date" {...register('identification.dateDebut')} />

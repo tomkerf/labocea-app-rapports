@@ -1,10 +1,11 @@
 import { NavLink, Outlet } from 'react-router'
-import { ClipboardList, Plus, Settings, Droplet } from 'lucide-react'
+import { ClipboardList, Plus, Settings, Droplet, FileText } from 'lucide-react'
 import { cn } from '../lib/cn'
 
 const navItems = [
   { to: '/', label: 'Interventions', icon: ClipboardList, end: true },
   { to: '/nouvelle', label: 'Nouvelle', icon: Plus, end: false },
+  { to: '/rapport', label: 'Rapport', icon: FileText, end: false },
   { to: '/parametres', label: 'Paramètres', icon: Settings, end: false },
 ]
 
@@ -71,7 +72,7 @@ export default function Layout() {
 
       {/* Bottom nav mobile (avec safe-area iOS/Android) */}
       <nav
-        className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-slate-200 grid grid-cols-3 z-10"
+        className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-slate-200 grid grid-cols-4 z-10"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         {navItems.map(({ to, label, icon: Icon, end }) => (

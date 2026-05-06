@@ -2,7 +2,7 @@
  * Sync équipements PMC v2 → Dexie local.
  * Lecture seule — ne modifie jamais Firestore.
  */
-import { collection, getDocs, query, where } from 'firebase/firestore'
+import { collection, getDocs } from 'firebase/firestore'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { firestore } from '../lib/firebase'
 import { db, type EquipementLocal } from './db'
@@ -15,11 +15,13 @@ export async function syncEquipements(force = false): Promise<void> {
   try {
     if (!force) {
       const last = await db.equipements.orderBy('syncedAt').last()
-      if (last && Date.now() - last.syncedAt < SYNC_TTL_MS) return
+      if (last && Date.now() - last.syncedAt < SYNC_TTL_MS) {
+        // Migration : si les flacons n'ont pas de champ poids, forcer resync
+        const flacon = await db.equipements.where('categorie').equals('flacon').first()
+        if (!flacon || flacon.poids !== undefined) return
+      }
     }
-    const snap = await getDocs(
-      query(collection(firestore, 'equipements'), where('etat', '!=', 'hors_service')),
-    )
+    const snap = await getDocs(collection(firestore, 'equipements'))
     const now = Date.now()
     const records: EquipementLocal[] = snap.docs.map((d) => {
       const data = d.data()
@@ -31,9 +33,10 @@ export async function syncEquipements(force = false): Promise<void> {
         numSerie: data.numSerie ?? '',
         categorie: data.categorie ?? 'autre',
         etat: data.etat ?? 'operationnel',
+        poids: data.poids ?? undefined,
         syncedAt: now,
       }
-    })
+    }).filter((e) => e.etat !== 'hors_service')
     await db.equipements.bulkPut(records)
     // Supprime les équipements retirés de Firestore
     const remoteIds = new Set(records.map((r) => r.id))
@@ -57,6 +60,21 @@ export function useEquipementsByCategorie(categorie: string | string[]) {
   )
 }
 
+/** Hook React — cherche un équipement par son nom exact (pour auto-fill). */
+export function useEquipementByNom(nom: string | undefined): EquipementLocal | undefined {
+  return useLiveQuery(
+    () => nom ? db.equipements.where('nom').equals(nom).first() : Promise.resolve(undefined),
+    [nom],
+  ) as EquipementLocal | undefined
+}
+
+/** Parse une chaîne de poids PMC v2 (ex: "6,900 kg" ou "0.570 kg") en nombre. */
+export function parsePoids(poids: string | undefined): number | null {
+  if (!poids) return null
+  const n = parseFloat(poids.replace(',', '.').replace(/[^\d.]/g, ''))
+  return isNaN(n) ? null : n
+}
+
 /** Hook React — tous les équipements. */
 export function useAllEquipements() {
   return useLiveQuery(
@@ -68,6 +86,5 @@ export function useAllEquipements() {
 
 /** Formate un équipement en label lisible pour l'autocomplete. */
 export function equipementLabel(e: EquipementLocal): string {
-  const parts = [e.nom, e.marque, e.modele].filter(Boolean)
-  return e.numSerie ? `${parts.join(' ')} — ${e.numSerie}` : parts.join(' ')
+  return e.nom
 }

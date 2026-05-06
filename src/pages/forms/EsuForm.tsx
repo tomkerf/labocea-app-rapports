@@ -4,6 +4,8 @@ import { Field, TextInput, NumberInput, Select, TextArea } from '../../component
 import { RadioGroup, CheckboxRow } from '../../components/ui/Radio'
 import type { Intervention } from '../../schemas/intervention'
 import { fillStateOf } from '../../lib/fillState'
+import { useClientNoms } from '../../db/clients'
+import { useTechnicienInitiales } from '../../db/techniciens'
 
 /**
  * Formulaire pour fiche PENV-SU-0117 (eaux superficielles).
@@ -14,6 +16,9 @@ export default function EsuForm() {
 
   const all = useWatch<Intervention>({ control })
   const fiche = all?.fiche?.typeFiche === 'ESU' ? all.fiche.data : undefined
+
+  const clientNoms = useClientNoms()
+  const techInitiales = useTechnicienInitiales()
 
   const typeMilieu = fiche?.localisation?.typeMilieu
   const modePrel = fiche?.modePrelevement?.mode
@@ -44,7 +49,11 @@ export default function EsuForm() {
               {...register('identification.client')}
               placeholder="Nom du client"
               autoCapitalize="words"
+              list="esu-clients-list"
             />
+            <datalist id="esu-clients-list">
+              {clientNoms.map((n) => <option key={n} value={n} />)}
+            </datalist>
           </Field>
           <Field label="N° convention / devis">
             <TextInput
@@ -62,9 +71,12 @@ export default function EsuForm() {
           <Field label="Opérateur" required>
             <TextInput
               {...register('identification.operateur')}
-              placeholder="Prénom NOM"
-              autoCapitalize="words"
+              placeholder="Initiales (ex : THK)"
+              list="esu-tech-list"
             />
+            <datalist id="esu-tech-list">
+              {techInitiales.map((i) => <option key={i} value={i} />)}
+            </datalist>
           </Field>
           <Field label="Date / heure prélèvement" required>
             <TextInput
