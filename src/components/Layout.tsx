@@ -1,11 +1,12 @@
 import { NavLink, Outlet } from 'react-router'
-import { ClipboardList, Plus, Settings, Droplet, FileText } from 'lucide-react'
+import { ClipboardList, Plus, Settings, Droplet, FileText, LineChart } from 'lucide-react'
 import { cn } from '../lib/cn'
 
 const navItems = [
   { to: '/', label: 'Interventions', icon: ClipboardList, end: true },
   { to: '/nouvelle', label: 'Nouvelle', icon: Plus, end: false },
   { to: '/rapport', label: 'Rapport', icon: FileText, end: false },
+  { to: '/synthese', label: 'Bilan', icon: LineChart, end: false },
   { to: '/parametres', label: 'Paramètres', icon: Settings, end: false },
 ]
 

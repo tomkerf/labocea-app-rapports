@@ -5,6 +5,13 @@ import { Trash2, Database } from 'lucide-react'
 export default function Settings() {
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
+  const [anthropicKey, setAnthropicKey] = useState(() => localStorage.getItem('anthropic_api_key') || '')
+
+  const handleSaveKey = () => {
+    localStorage.setItem('anthropic_api_key', anthropicKey)
+    setMsg('Clé API Anthropic sauvegardée.')
+    setTimeout(() => setMsg(null), 3000)
+  }
 
   const handleClear = async () => {
     if (!confirm('Effacer TOUTES les interventions enregistrées localement ? Cette action est irréversible.')) return
@@ -39,7 +46,30 @@ export default function Settings() {
         >
           <Trash2 className="w-4 h-4" /> Effacer la base locale
         </button>
-        {msg && <p className="text-xs text-slate-500 mt-3">{msg}</p>}
+      </section>
+
+      <section className="bg-white border border-slate-200 rounded-xl p-5 mt-4">
+        <h2 className="font-semibold mb-3">Synthèse Annuelle (IA)</h2>
+        <p className="text-sm text-slate-600 mb-4">
+          Pour générer les rapports de synthèse annuelle, l'application utilise l'IA de Claude (Anthropic). 
+          Ta clé API est requise et restera stockée uniquement dans ce navigateur.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <input
+            type="password"
+            value={anthropicKey}
+            onChange={(e) => setAnthropicKey(e.target.value)}
+            placeholder="sk-ant-api03-..."
+            className="flex-1 px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+          />
+          <button
+            onClick={handleSaveKey}
+            className="px-4 py-2 bg-brand-600 text-white text-sm font-medium rounded-md hover:bg-brand-700 transition"
+          >
+            Enregistrer la clé
+          </button>
+        </div>
+        {msg && msg.includes('Clé') && <p className="text-xs text-green-600 mt-2">{msg}</p>}
       </section>
 
       <section className="bg-white border border-slate-200 rounded-xl p-5 mt-4">

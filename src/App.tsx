@@ -5,6 +5,7 @@ import InterventionForm from './pages/InterventionForm'
 import NewIntervention from './pages/NewIntervention'
 import Settings from './pages/Settings'
 import RapportGenerator from './pages/RapportGenerator'
+import SyntheseGenerator from './pages/SyntheseGenerator'
 
 export default function App() {
   return (
@@ -14,6 +15,7 @@ export default function App() {
         <Route path="nouvelle" element={<NewIntervention />} />
         <Route path="intervention/:id" element={<InterventionForm />} />
         <Route path="rapport" element={<RapportGenerator />} />
+        <Route path="synthese" element={<SyntheseGenerator />} />
         <Route path="parametres" element={<Settings />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

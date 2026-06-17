@@ -9,6 +9,12 @@
     <title>Labocea — Rapports terrain</title>
   </head>
   <body>
+    <div id="error-log" style="color: red; position: fixed; z-index: 9999; background: white; padding: 20px; font-family: monospace;"></div>
+    <script>
+      window.onerror = function(msg, url, line, col, error) {
+        document.getElementById("error-log").innerHTML += "<p>" + msg + "<br/>" + (error && error.stack ? error.stack : "") + "</p>";
+      };
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
